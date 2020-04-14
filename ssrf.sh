@@ -42,26 +42,21 @@ echo -e "RUNNING GAU \e[32mFINISH\e[0m"
 
 echo "${red} ---------------COLLECTED URLS OF SUBDOMAINS--------------- ${reset}"
 
-##Filter Urls to check with drishti
-echo -e "\n\e[31m[Filtering Urls with params]\e[0m"
-cat $output_directory/$1/$1.urls.txt | grep "=http" | tee $output_directory/$1/$1.urls_with_params.txt
-echo -e "Filtering Urls with params completed \e[32mFINISH\e[0m"
+##Checking urls with anti-burl
+echo -e "\nRUNNING \e[31m[anti-burl]\e[0m"
+cat $output_directory/$1/$1.urls.txt | grep "=http" | anti-burl | tee $output_directory/$1/$1.urls_with_params.txt
+
+echo -e "RUNNING Anti-burl \e[32mFINISH\e[0m"
 
 ##Cleaning the list for urls
-echo -e "\nChecking for Live Urls \e[31m[LIST]\e[0m"
-cp $output_directory/$1/$1.urls_with_params.txt ./Drishti/
-mv ./Drishti/$1.urls_with_params.txt ./Drishti/raw_urls.txt
-cd ./Drishti
-python3 drishti.py
-cd ..
-cp ./Drishti/Results-200.txt $output_directory/$1/
-rm ./Drishti/raw_urls.txt
-echo "FOUND POSSIBLE SSRF URLS [$(cat $output_directory/$1/Results-200.txt | wc -l)]"
-echo -e "Checking for Live Urls \e[32mFINISH\e[0m"
+echo -e "\nCleaning \e[31m[LIST]\e[0m"
+cat $output_directory/$1/$1.urls_with_params.txt | sed 's/[^http]*\(http.*\)/\1/' > $output_directory/$1/$1.ssrf_testing.txt
+echo "FOUND POSSIBLE SSRF URLS [$(cat $output_directory/$1/$1.ssrf_testing.txt | wc -l)]"
+echo -e "Cleaning list \e[32mFINISH\e[0m"
 
 ##FUZZ
 echo -e "\nHope You Have Added Burp Collab Url In burp.txt Fuzzing\e[31m[LIST]\e[0m"
-cat $output_directory/$1/Results-200.txt | qsreplace FUZZ > $output_directory/$1/fuzzable.txt
+cat $output_directory/$1/$1.ssrf_testing.txt | qsreplace FUZZ > $output_directory/$1/fuzzable.txt
 cat $output_directory/$1/fuzzable.txt | while read url;do ffuf -w ./burp.txt -u "$url" -v;done
 echo "${red} --------------DONE---------------- ${reset}"
 }
